@@ -22,7 +22,7 @@ def create_app():
     # Adding Api Resources
     api.add_resource(User_profile_API, '/api/User_profile',
                      '/api/User_profile/<string:username>')
-    security = Security(app, user_datastore)
+    app.security = Security(app, user_datastore)
     api.init_app(app)
     CORS(app)
 
