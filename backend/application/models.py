@@ -9,7 +9,7 @@ class Roles(db.Model, RoleMixin):
     description = db.Column(db.String)
 
 
-class RoleUsers(db.Model):
+class RolesUsers(db.Model):
     __tablename__ = "roles_users"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
     user_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
@@ -25,14 +25,17 @@ class Users(db.Model, UserMixin):
     user_image = db.Column(db.String, nullable=False)
     fs_uniquifier = db.Column(db.String, unique=True, nullable=False)
     fs_token_uniquifier = db.Column(db.String, unique=True, nullable=False)
-    last_login_at = db.Column(db.DateTime, nullable=False)
+    last_login_at = db.Column(db.DateTime)
     current_login_at = db.Column(db.DateTime)
     active = db.Column(db.String)
     last_login_ip = db.Column(db.String(100))
     current_login_ip = db.Column(db.String(100))
     login_count = db.Column(db.Integer)
-    Roles = db.relationship(
-        "Role", secondary="roles_users", backref=db.backref("users", lazy="dynamic")
+    roles = db.relationship(
+        "Roles",
+        secondary="roles_users",
+        backref=db.backref("users_roles", lazy="dynamic"),
+        viewonly=True,
     )
 
 

@@ -14,14 +14,15 @@ api = Api()
 
 def create_app():
     app = Flask(__name__)
-    if os.getenv('ENV', "development") == "production":
+    if os.getenv("ENV", "development") == "production":
         raise Exception("currently no production config is setup.")
     else:
         app.config.from_object(LocalDevelopmentConfig)
     db.init_app(app)
     # Adding Api Resources
-    api.add_resource(User_profile_API, '/api/User_profile',
-                     '/api/User_profile/<string:username>')
+    api.add_resource(
+        User_profile_API, "/api/User_profile", "/api/User_profile/<string:username>"
+    )
     app.security = Security(app, user_datastore)
     api.init_app(app)
     CORS(app)

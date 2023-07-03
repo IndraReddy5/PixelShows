@@ -6,10 +6,14 @@ app = create_app()
 app.app_context().push()
 db.create_all()
 
-if not app.security.datastore.find_role("admin"):
-    app.security.datastore.create_role(
-        name="admin", description="admin_role, can create shows and venues"
-    )
+
+admin_role = app.security.datastore.find_or_create_role(
+    name="admin", description="can create, delete, update shows and venues"
+)
+
+user_role = app.security.datastore.find_or_create_role(
+    name="user", description="can book tickets for shows"
+)
 
 
 if not app.security.datastore.find_user(email="admin@pixelshows.com"):
@@ -18,8 +22,10 @@ if not app.security.datastore.find_user(email="admin@pixelshows.com"):
         email="admin@pixelshows.com",
         password=hash_password("pixel123"),
         user_image="admin_image.jpg",
-        Roles=["admin"],
+        roles=[admin_role],
     )
+
+db.session.commit()
 
 if __name__ == "__main__":
     app.run(port=8000)
