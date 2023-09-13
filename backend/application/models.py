@@ -22,7 +22,6 @@ class Users(db.Model, UserMixin):
     username = db.Column(db.String, unique=True, nullable=False)
     email = db.Column(db.String, nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
-    user_image = db.Column(db.String, nullable=False)
     fs_uniquifier = db.Column(db.String, unique=True, nullable=False)
     fs_token_uniquifier = db.Column(db.String, unique=True, nullable=False)
     last_login_at = db.Column(db.DateTime)
@@ -37,6 +36,7 @@ class Users(db.Model, UserMixin):
         backref=db.backref("users_roles", lazy="dynamic"),
         viewonly=True,
     )
+    user_bookings = db.relationship("UserBookings", foreign_keys="UserBookings.user_id", lazy="dynamic", backref=db.backref("user_info"))
 
 
 class VenueTypes(db.Model):

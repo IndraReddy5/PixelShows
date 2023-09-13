@@ -46,6 +46,46 @@ class Admin_Change_Password_API(Resource):
             raise NotFound(status_code=404, error_message="User not found")
 
 
+class Admin_Save_Image_API(Resource):
+    @roles_required("admin")
+    @auth_required("token")
+    def post(self, filename):
+        image = request.files.get("file")
+        location = os.path.join(os.getcwd(), "..", "static", filename)
+        image.save(location)
+        return "Image Saved", 200
+
+
+class Admin_Get_Bookings(Resource):
+    @roles_required("admin")
+    @auth_required("token")
+    def get(self):
+        ub_objs = UserBookings.query.all()
+        if ub_objs:
+            booking_data = {
+                "bookings": [
+                    {
+                        "username": ub.user_info.username,
+                        "email": ub.user_info.email,
+                        "role": ub.user_info.roles.name,
+                        "last_login_at": ub.user_info.last_login_at,
+                        "show_name": ub.show_info_user.show_info.show_name,
+                        "venue_name": ub.show_info_user.venue_info.venue_name,
+                        "show_timing": ub.show_info_user.show_info.show_timing,
+                        "booking_date": ub.booking_date,
+                        "ticket_price": ub.booking_price,
+                        "no_of_tickets_booked": ub.no_of_tickets,
+                        "payment_status": ub.payment_status,
+                        "show_status": ub.show_status,
+                    }
+                    for ub in ub_objs.user_bookings
+                ]
+            }
+
+        else:
+            return json.dumps({"bookings": []}), 200
+
+
 class Admin_Venue_Type_API(Resource):
     @roles_required("admin")
     @auth_required("token")
@@ -154,17 +194,6 @@ class Admin_Tag_API(Resource):
             db.session.delete(t_obj)
             db.session.commit()
             return "Tag Deleted", 200
-        else:
-            raise NotFound(status_code=404, error_message="Tag not found")
-
-    @roles_required("admin")
-    @auth_required("token")
-    def put(self, old_tag_value, new_tag_value):
-        t_obj = Tags.query.filter_by(tag_name=old_tag_value).first()
-        if t_obj:
-            t_obj.tag_name = new_tag_value
-            db.session.commit()
-            return "Tag Updated", 200
         else:
             raise NotFound(status_code=404, error_message="Tag not found")
 
@@ -279,116 +308,79 @@ class Admin_Shows_API(Resource):
 
 ### Patron APIs
 class User_profile_API(Resource):
-    output = {
-        "username": fields.String,
-        "first_name": fields.String,
-        "last_name": fields.String,
-        "profile_image": fields.String,
-        "email": fields.String,
-        "followers_count": fields.Integer,
-        "following": fields.Integer,
-        "total_posts": fields.Integer,
-    }
-
-    @roles_required("admin")
+    @roles_required("patron")
     @auth_required("token")
-    @marshal_with(output)
     def get(self, username):
         u_obj = Users.query.filter_by(username=username).first()
         if u_obj:
-            u_obj.followers_count = len(u_obj.followed)
-            u_obj.following = len(u_obj.follower)
-            u_obj.total_posts = len(u_obj.posts_rel)
-            return u_obj, 200
+            user_data = {
+                "username": u_obj.username,
+                "email": u_obj.email,
+                "role": u_obj.roles.name,
+                "last_login_at": u_obj.last_login_at,
+                "past_bookings": {
+                    {
+                        "show_name": ub.show_info_user.show_info.show_name,
+                        "venue_name": ub.show_info_user.venue_info.venue_name,
+                        "show_timing": ub.show_info_user.show_info.show_timing,
+                        "booking_date": ub.booking_date,
+                        "ticket_price": ub.booking_price,
+                        "no_of_tickets_booked": ub.no_of_tickets,
+                        "payment_status": ub.payment_status,
+                        "show_status": ub.show_status,
+                    }
+                    for ub in u_obj.user_bookings
+                },
+            }
+            return json.dumps(user_data), 200
         else:
             raise NotFound(status_code=404, error_message="User not found")
 
     def delete(self, username):
         u_obj = Users.query.filter_by(username=username).first()
-        u_p_obj = Users.query.filter_by(username=username).first()
-        if u_obj and u_p_obj:
-            for post in u_p_obj.posts_rel:
-                if post.post_image:
-                    file_path = (
-                        f"static/post_images/{post.author_name}_"
-                        + post.title
-                        + "_"
-                        + post.post_image
-                    )
-                    print(file_path)
-                    cmd = "rm " + f"'{file_path}'"
-                    os.system(cmd)
+        if u_obj:
             db.session.delete(u_obj)
-            db.session.delete(u_p_obj)
-            # profile pic to be deleted
-            file_path = f"static/profile_images/{username}_" + u_p_obj.profile_image
-            cmd = "rm " + f"{file_path}"
-            os.system(cmd)
             db.session.commit()
             return f"{username} profile deleted", 200
         else:
             raise NotFound(status_code=404, error_message="User not found")
 
-    @marshal_with(output)
+    @roles_required("patron")
+    @auth_required("token")
     def put(self, username):
         u_obj = Users.query.filter_by(username=username).first()
-        u_p_obj = Users.query.filter_by(username=username).first()
-        if u_p_obj and u_obj:
+        if u_obj:
             form_data = request.get_json()
-            if form_data.get("profile_image"):
-                file_path = f"static/profile_images/{username}_" + u_p_obj.profile_image
-                cmd = "rm " + f"'{file_path}'"
-                os.system(cmd)
-                u_obj.profile_image = form_data.get("profile_image")
-                u_p_obj.profile_image = form_data.get("profile_image")
-            u_p_obj.first_name = form_data.get("first_name")
-            u_p_obj.last_name = form_data.get("last_name")
-            u_p_obj.email = form_data.get("email")
+            u_obj.username = username
             u_obj.email = form_data.get("email")
             u_obj.password = hash_password(form_data.get("password"))
-            db.session.commit()
-            u_p_obj.followers_count = len(u_p_obj.followed)
-            u_p_obj.following = len(u_p_obj.follower)
-            u_p_obj.total_posts = len(u_p_obj.posts_rel)
 
-            return u_p_obj, 200
+            return "User Profile Updated", 200
         else:
             raise NotFound(status_code=404, error_message="User not found")
 
-    @marshal_with(output)
+    @roles_required("patron")
+    @auth_required("token")
     def post(self):
         form_data = request.get_json()
         username = form_data.get("username")
-        if not Users.query.filter_by(username=username).first():
-            if username:
-                u_obj = Users()
-                u = user_datastore.create_user(
-                    username=form_data.get("username"),
-                    password=hash_password(form_data.get("password")),
-                    email=form_data.get("email"),
-                    profile_image=form_data.get("profile_image"),
-                )
-                u_obj.username = form_data.get("username")
-                u_obj.first_name = form_data.get("first_name")
-                u_obj.last_name = form_data.get("last_name")
-                u_obj.email = form_data.get("email")
-                u_obj.profile_image = form_data.get("profile_image")
-                db.session.add(u_obj)
-                db.session.commit()
-                u_obj.followers_count = 0
-                u_obj.following = 0
-                u_obj.total_posts = 0
-                return u_obj, 200
-            else:
-                raise ValidationError(
-                    status_code=400,
-                    error_code="user_2",
-                    error_message="username not given.",
-                )
+        email = form_data.get("email")
+        if (
+            not Users.query.filter_by(username=username).first()
+            and not Users.query.filter_by(email=email).first()
+        ):
+            user_datastore.create_user(
+                username=form_data.get("username"),
+                password=hash_password(form_data.get("password")),
+                email=form_data.get("email"),
+                roles=["patron"],
+            )
+            db.session.commit()
+            return "user created", 200
         else:
             raise ValidationError(
                 status_code=400,
-                error_code="user_1",
+                error_code="user_exists",
                 error_message="username already exists.",
             )
 
@@ -423,6 +415,40 @@ class User_Bookings_API(Resource):
             return "Ticket Cancelled", 200
         else:
             raise NotFound(status_code=404, error_message="Ticket not found")
+
+
+class User_Venue_Reviews_API(Resource):
+    @roles_required("patron")
+    @auth_required("token")
+    def post(self):
+        form_data = request.get_json()
+        vr_obj = VenueReviews()
+        vr_obj.venue_id = form_data.get("venue_id")
+        vr_obj.user_id = form_data.get("user_id")
+        vr_obj.review_text = form_data.get("review_text")
+        vr_obj.rating = form_data.get("rating")
+
+        db.session.add(vr_obj)
+        db.session.commit()
+
+        return "Venue Review Added", 200
+
+
+class User_Show_Reviews_API(Resource):
+    @roles_required("patron")
+    @auth_required("token")
+    def post(self):
+        form_data = request.get_json()
+        sr_obj = ShowReviews()
+        sr_obj.show_id = form_data.get("show_id")
+        sr_obj.user_id = form_data.get("user_id")
+        sr_obj.review_text = form_data.get("review_text")
+        sr_obj.rating = form_data.get("rating")
+
+        db.session.add(sr_obj)
+        db.session.commit()
+
+        return "Show Review Added", 200
 
 
 ### Public APIs
@@ -677,3 +703,67 @@ class Public_Show_API(Resource):
             )
         else:
             raise NotFound(status_code=404, error_message="Show not found")
+
+
+class Public_Show_Search(Resource):
+    @auth_required("token")
+    def get(self, location=None, tag=None):
+        if location:
+            v_objs = Venues.query.filter_by(venue_city=location).all()
+            v_ids = [v.id for v in v_objs]
+        if location and tag:
+            s_objs = Shows.query.filter(
+                Shows.show_venues.any(venue_id=v_ids),
+                Shows.show_tags.any(tag_name=tag),
+            ).all()
+        elif not location and tag:
+            s_objs = Shows.query.filter(Shows.show_tags.any(tag_name=tag)).all()
+        else:
+            s_objs = Shows.query.filter(Shows.show_venues.any(venue_id=v_ids)).all()
+
+            if s_objs:
+                return (
+                    json.dumps(
+                        {
+                            "shows": sort_by_time(
+                                {
+                                    s.show_name: {
+                                        "ticket_price": s.ticket_price
+                                        + VenueTypes.query.filter_by(
+                                            venue_id=s.show_venues.venue_info.venue_type
+                                        )
+                                        .first()
+                                        .venue_charges,
+                                        "show_description": s.show_description,
+                                        "show_poster": s.show_poster,
+                                        "show_timing": s.show_timing,
+                                        "show_venues": [
+                                            (
+                                                sv.venue_id,
+                                                sv.venue_info.venue_name,
+                                                sv.tickets_sold,
+                                            )
+                                            for sv in s.show_venues
+                                        ],
+                                        "show_tags": [
+                                            (st.tag_id, st.tag_info.tag_name)
+                                            for st in s.show_tags
+                                        ],
+                                        "show_rating": average(
+                                            [
+                                                e.rating
+                                                for e in ShowReviews.query.filter_by(
+                                                    show_id=s.id
+                                                ).all()
+                                            ]
+                                        ),
+                                    }
+                                    for s in s_objs
+                                }
+                            )
+                        }
+                    ),
+                    200,
+                )
+            else:
+                return json.dumps({"shows": []}), 200

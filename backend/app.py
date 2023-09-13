@@ -20,7 +20,6 @@ if not app.security.datastore.find_user(email="admin@pixelshows.com"):
         username="admin",
         email="admin@pixelshows.com",
         password=hash_password("pixel123"),
-        user_image="admin_image.jpg",
         roles=[admin_role],
     )
 
