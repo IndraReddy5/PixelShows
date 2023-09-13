@@ -1,5 +1,5 @@
 backend/env/
 backend/__pycache__/
 backend/application/__pycache__/
-backend/.*.excalidraw
+*.excalidraw
 .vscode/

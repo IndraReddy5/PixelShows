@@ -34,7 +34,6 @@ class Users(db.Model, UserMixin):
         "Roles",
         secondary="roles_users",
         backref=db.backref("users_roles", lazy="dynamic"),
-        viewonly=True,
     )
     user_bookings = db.relationship("UserBookings", foreign_keys="UserBookings.user_id", lazy="dynamic", backref=db.backref("user_info"))
 

@@ -359,8 +359,6 @@ class User_Profile_API(Resource):
         else:
             raise NotFound(status_code=404, error_message="User not found")
 
-    @roles_required("patron")
-    @auth_required("token")
     def post(self):
         form_data = request.get_json()
         username = form_data.get("username")

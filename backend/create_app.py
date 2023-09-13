@@ -30,7 +30,7 @@ def create_app():
     api.add_resource(Admin_Tag_API, "/api/tag", "/api/tag/<string:tag_value>")
     api.add_resource(Admin_Shows_API, "/api/shows", "/api/shows/<int:s_id>")
     api.add_resource(
-        User_Profile_API, "/api/userprofile", "/api/userprofile/<string:username>"
+        User_Profile_API, "/api/createuserprofile", "/api/userprofile/<string:username>"
     )
     api.add_resource(User_Bookings_API, "/api/bookings", "/api/bookings/<int:ub_id>")
     api.add_resource(User_Venue_Reviews_API, "/api/venuereviews")
