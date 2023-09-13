@@ -1,6 +1,5 @@
 from create_app import create_app, db
 from flask_security import hash_password
-from application.models import Roles
 
 app = create_app()
 app.app_context().push()
@@ -12,7 +11,7 @@ admin_role = app.security.datastore.find_or_create_role(
 )
 
 user_role = app.security.datastore.find_or_create_role(
-    name="user", description="can book tickets for shows"
+    name="patron", description="can book tickets for shows"
 )
 
 

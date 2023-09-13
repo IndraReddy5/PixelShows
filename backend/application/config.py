@@ -20,6 +20,7 @@ class Config:
     SECURITY_USERNAME_ENABLE = True
     SECURITY_USERNAME_REQUIRED = True
     SECURITY_TRACKABLE = True
+    SECURITY_LOGIN_USER_TEMPLATE = "unauthorized_view.html"
 
 
 class LocalDevelopmentConfig(Config):

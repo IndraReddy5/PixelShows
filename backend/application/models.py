@@ -39,6 +39,13 @@ class Users(db.Model, UserMixin):
     )
 
 
+class VenueTypes(db.Model):
+    __tablename__ = "venue_types"
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
+    type = db.Column(db.String)
+    venue_charges = db.Column(db.Float)
+
+
 class Venues(db.Model):
     __tablename__ = "venues"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
@@ -47,7 +54,8 @@ class Venues(db.Model):
     venue_image = db.Column(db.String)
     venue_address = db.Column(db.String(500))
     venue_city = db.Column(db.String(120))
-    venue_rating = db.Column(db.Float())
+    venue_type = db.Column(db.Integer, db.ForeignKey("venue_types.id"))
+    venue_shows = db.relationship("ShowVenues", foreign_keys="ShowVenues.venue_id", lazy="dynamic", backref=db.backref("venue_info"))
 
 
 class Shows(db.Model):
@@ -55,13 +63,18 @@ class Shows(db.Model):
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
     show_name = db.Column(db.String(240))
     ticket_price = db.Column(db.Float)
-    average_rating = db.Column(db.Float)
+    show_description = db.Column(db.String(500))
+    show_poster = db.Column(db.String(500))
+    show_timing = db.Column(db.DateTime)
+    show_venues = db.relationship("ShowVenues", foreign_keys="ShowVenues.show_id", lazy="dynamic", backref=db.backref("show_info"))
+    show_tags = db.relationship("ShowTags", foreign_keys="ShowTags.show_id", lazy="dynamic")
 
 
 class Tags(db.Model):
     __tablename__ = "tags"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
     tag_name = db.Column(db.String(60))
+    tag_rel = db.relationship("ShowTags", foreign_keys="ShowTags.tag_id", lazy="dynamic", backref = db.backref("tag_info"))
 
 
 class ShowTags(db.Model):
@@ -69,7 +82,7 @@ class ShowTags(db.Model):
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
     show_id = db.Column(db.Integer, db.ForeignKey("shows.id"))
     tag_id = db.Column(db.Integer, db.ForeignKey("tags.id"))
-
+    
 
 class ShowVenues(db.Model):
     __tablename__ = "show_venues"
@@ -77,8 +90,7 @@ class ShowVenues(db.Model):
     venue_id = db.Column(db.Integer, db.ForeignKey("venues.id"))
     show_id = db.Column(db.Integer, db.ForeignKey("shows.id"))
     tickets_sold = db.Column(db.Integer)
-    show_timing = db.Column(db.DateTime)
-    show_poster = db.Column(db.String(500))
+    user_bookings = db.relationship("UserBookings", foreign_keys="UserBookings.show_venues_id", lazy="dynamic", backref=db.backref("show_info_user"))
 
 
 class ShowReviews(db.Model):
@@ -95,10 +107,12 @@ class UserBookings(db.Model):
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     show_venues_id = db.Column(db.Integer, db.ForeignKey("show_venues.id"))
+    show_id = db.Column(db.Integer, db.ForeignKey("shows.id"))
     booking_date = db.Column(db.DateTime)
     booking_price = db.Column(db.Float)
-    booking_status = db.Column(db.String(60))
     no_of_tickets = db.Column(db.Integer)
+    payment_status = db.Column(db.String(60))
+    show_status = db.Column(db.String(60))
 
 
 class VenueReviews(db.Model):
@@ -108,3 +122,9 @@ class VenueReviews(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     review_text = db.Column(db.String(500))
     rating = db.Column(db.Float)
+
+class ArchivedShows(db.Model):
+    __tablename__ = "archived_shows"
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True, nullable=False)
+    show_id = db.Column(db.Integer, db.ForeignKey("shows.id"))
+    show_name = db.Column(db.String(240))
