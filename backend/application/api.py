@@ -56,7 +56,7 @@ class Admin_Save_Image_API(Resource):
         return "Image Saved", 200
 
 
-class Admin_Get_Bookings(Resource):
+class Admin_Get_Bookings_API(Resource):
     @roles_required("admin")
     @auth_required("token")
     def get(self):
@@ -307,7 +307,7 @@ class Admin_Shows_API(Resource):
 
 
 ### Patron APIs
-class User_profile_API(Resource):
+class User_Profile_API(Resource):
     @roles_required("patron")
     @auth_required("token")
     def get(self, username):
@@ -705,7 +705,7 @@ class Public_Show_API(Resource):
             raise NotFound(status_code=404, error_message="Show not found")
 
 
-class Public_Show_Search(Resource):
+class Public_Show_Search_API(Resource):
     @auth_required("token")
     def get(self, location=None, tag=None):
         if location:
