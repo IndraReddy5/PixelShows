@@ -1,4 +1,4 @@
-import datetime as dt
+from datetime import datetime as dt
 
 
 def prettify_date(date):
@@ -12,4 +12,4 @@ def average(l):
     return sum(l) / len(l) if len(l) > 0 else 0
 
 def sort_by_time(l):
-    return dict(sorted(l.items(), key=lambda x: x[1].show_timing, reverse=True))
+    return dict(sorted(l.items(), key=lambda x: x[1]['show_timing'], reverse=True))

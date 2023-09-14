@@ -24,6 +24,5 @@ if not app.security.datastore.find_user(email="admin@pixelshows.com"):
     )
 
 db.session.commit()
-
 if __name__ == "__main__":
     app.run(port=8000)

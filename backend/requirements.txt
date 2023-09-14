@@ -5,3 +5,4 @@ passlib
 flask-security-too
 flask-cors
 bleach
+requests

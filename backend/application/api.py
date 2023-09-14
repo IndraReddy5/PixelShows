@@ -23,7 +23,7 @@ user_datastore = SQLAlchemyUserDatastore(db, Users, Roles)
 ### JS Console Login API Fetch Request Test Code
 """
 let data = {'username':'admin','password':'pixel123'}
-fetch("http://127.0.0.1:8000/login?include_auth_token",
+fetch("http://127.0.0.1:8000/api/login?include_auth_token",
 {headers:{'content-type': 'application/json'},
 'method':'POST','body':JSON.stringify(data)})
 .then(response => response.json())
@@ -155,7 +155,7 @@ class Admin_Venue_API(Resource):
                 ub_obj = UserBookings.query.filter_by(show_venue_id=sv.id).all()
                 for ub in ub_obj:
                     if (
-                        dt.strptime(sv.show_info.show_timing, "%m/%d/%y %H:%M:%S")
+                        dt.strptime(sv.show_info.show_timing, "%m/%d/%Y %H:%M:%S")
                         > dt.now()
                     ):
                         ub.payment_status = "Refunded"
@@ -209,7 +209,9 @@ class Admin_Shows_API(Resource):
         s_obj.ticket_price = form_data.get("ticket_price")
         s_obj.show_description = form_data.get("show_description")
         s_obj.show_poster = form_data.get("show_poster")
-        s_obj.show_timing = form_data.get("show_timing")
+        s_obj.show_timing = dt.strptime(
+            form_data.get("show_timing"), "%m/%d/%Y %H:%M:%S"
+        )
         db.session.add(s_obj)
         db.session.commit()
         show_venues_list = list(form_data.get("show_venues"))
@@ -241,7 +243,7 @@ class Admin_Shows_API(Resource):
                 ub_obj = UserBookings.query.filter_by(show_venue_id=sv.id).all()
                 for ub in ub_obj:
                     if (
-                        dt.strptime(sv.show_info.show_timing, "%m/%d/%y %H:%M:%S")
+                        dt.strptime(sv.show_info.show_timing, "%m/%d/%Y %H:%M:%S")
                         > dt.now()
                     ):
                         ub.payment_status = "Refunded"
@@ -257,6 +259,7 @@ class Admin_Shows_API(Resource):
             # moving the deleted show to ArchivedShows table
             ds_obj = ArchivedShows()
             ds_obj.show_name = s_obj.show_name
+            db.session.add(ds_obj)
 
             # finally deleting it from shows table
             db.session.delete(s_obj)
@@ -274,8 +277,9 @@ class Admin_Shows_API(Resource):
         s_obj.ticket_price = form_data.get("ticket_price")
         s_obj.show_description = form_data.get("show_description")
         s_obj.show_poster = form_data.get("show_poster")
-        s_obj.show_timing = form_data.get("show_timing")
-        db.session.add(s_obj)
+        s_obj.show_timing = dt.strptime(
+            form_data.get("show_timing"), "%m/%d/%Y %H:%M:%S"
+        )
         db.session.commit()
 
         # adding these loops to make the changes to previous show_venues and show_tags
@@ -392,7 +396,7 @@ class User_Bookings_API(Resource):
         ub_obj.user_id = form_data.get("username")
         ub_obj.show_id = form_data.get("show_id")
         ub_obj.show_venues_id = form_data.get("show_venues_id")
-        ub_obj.booking_date = dt.now().strftime("%m/%d/%y %H:%M:%S")
+        ub_obj.booking_date = dt.now().strptime("%m/%d/%Y %H:%M:%S")
         ub_obj.booking_price = form_data.get("booking_price")
         ub_obj.no_of_tickets = form_data.get("no_of_tickets")
         ub_obj.payment_status = "Payment_Completed"
@@ -621,20 +625,22 @@ class Public_Show_API(Resource):
                         "shows": sort_by_time(
                             {
                                 s.show_name: {
-                                    "ticket_price": s.ticket_price
-                                    + VenueTypes.query.filter_by(
-                                        venue_id=s.show_venues.venue_info.venue_type
-                                    )
-                                    .first()
-                                    .venue_charges,
+                                    "ticket_price": s.ticket_price,
                                     "show_description": s.show_description,
                                     "show_poster": s.show_poster,
-                                    "show_timing": s.show_timing,
+                                    "show_timing": s.show_timing.strftime(
+                                        "%m/%d/%Y %H:%M:%S"
+                                    ),
                                     "show_venues": [
                                         (
                                             sv.venue_id,
                                             sv.venue_info.venue_name,
                                             sv.tickets_sold,
+                                            VenueTypes.query.filter_by(
+                                                id=sv.venue_info.venue_type
+                                            )
+                                            .first()
+                                            .venue_charges,
                                         )
                                         for sv in s.show_venues
                                     ],
@@ -661,6 +667,8 @@ class Public_Show_API(Resource):
         else:
             return json.dumps({"shows": []}), 200
 
+
+class Public_Single_Show_API(Resource):
     @auth_required("token")
     def get(self, s_id):
         s_obj = Shows.query.filter_by(id=s_id).first()
@@ -669,17 +677,23 @@ class Public_Show_API(Resource):
                 json.dumps(
                     {
                         s_obj.show_name: {
-                            "ticket_price": s_obj.ticket_price
-                            + VenueTypes.query.filter_by(
-                                venue_id=s_obj.show_venues.venue_info.venue_type
-                            )
-                            .first()
-                            .venue_charges,
+                            "ticket_price": s_obj.ticket_price,
                             "show_description": s_obj.show_description,
                             "show_poster": s_obj.show_poster,
-                            "show_timing": s_obj.show_timing,
+                            "show_timing": s_obj.show_timing.strftime(
+                                "%m/%d/%Y %H:%M:%S"
+                            ),
                             "show_venues": [
-                                (sv.venue_id, sv.venue_info.venue_name, sv.tickets_sold)
+                                (
+                                    sv.venue_id,
+                                    sv.venue_info.venue_name,
+                                    sv.tickets_sold,
+                                    VenueTypes.query.filter_by(
+                                        id=sv.venue_info.venue_type
+                                    )
+                                    .first()
+                                    .venue_charges,
+                                )
                                 for sv in s_obj.show_venues
                             ],
                             "show_tags": [
@@ -705,63 +719,73 @@ class Public_Show_API(Resource):
 
 class Public_Show_Search_API(Resource):
     @auth_required("token")
-    def get(self, location=None, tag=None):
+    def get(self):
+        location = request.args.get("location")
+        tag = request.args.get("tag")
         if location:
             v_objs = Venues.query.filter_by(venue_city=location).all()
             v_ids = [v.id for v in v_objs]
         if location and tag:
-            s_objs = Shows.query.filter(
-                Shows.show_venues.any(venue_id=v_ids),
-                Shows.show_tags.any(tag_name=tag),
-            ).all()
+            tag_id = Tags.query.filter_by(tag_name=tag).first().id
+            s_objs = [
+                Shows.query.filter(
+                    Shows.show_venues.any(venue_id=v_id),
+                    Shows.show_tags.any(tag_id=tag_id),
+                ).all()
+                for v_id in v_ids
+            ]
         elif not location and tag:
-            s_objs = Shows.query.filter(Shows.show_tags.any(tag_name=tag)).all()
+            s_objs = Shows.query.filter(Shows.show_tags.any(tag_id=tag_id)).all()
         else:
-            s_objs = Shows.query.filter(Shows.show_venues.any(venue_id=v_ids)).all()
-
-            if s_objs:
-                return (
-                    json.dumps(
-                        {
-                            "shows": sort_by_time(
-                                {
-                                    s.show_name: {
-                                        "ticket_price": s.ticket_price
-                                        + VenueTypes.query.filter_by(
-                                            venue_id=s.show_venues.venue_info.venue_type
-                                        )
-                                        .first()
-                                        .venue_charges,
-                                        "show_description": s.show_description,
-                                        "show_poster": s.show_poster,
-                                        "show_timing": s.show_timing,
-                                        "show_venues": [
-                                            (
-                                                sv.venue_id,
-                                                sv.venue_info.venue_name,
-                                                sv.tickets_sold,
+            s_objs = [
+                Shows.query.filter(Shows.show_venues.any(venue_id=v_id)).all()
+                for v_id in v_ids
+            ]
+        if s_objs:
+            return (
+                json.dumps(
+                    {
+                        "shows": sort_by_time(
+                            {
+                                s.show_name: {
+                                    "ticket_price": s.ticket_price,
+                                    "show_description": s.show_description,
+                                    "show_poster": s.show_poster,
+                                    "show_timing": s.show_timing.strftime(
+                                        "%m/%d/%Y %H:%M:%S"
+                                    ),
+                                    "show_venues": [
+                                        (
+                                            sv.venue_id,
+                                            sv.venue_info.venue_name,
+                                            sv.tickets_sold,
+                                            VenueTypes.query.filter_by(
+                                                id=sv.venue_info.venue_type
                                             )
-                                            for sv in s.show_venues
-                                        ],
-                                        "show_tags": [
-                                            (st.tag_id, st.tag_info.tag_name)
-                                            for st in s.show_tags
-                                        ],
-                                        "show_rating": average(
-                                            [
-                                                e.rating
-                                                for e in ShowReviews.query.filter_by(
-                                                    show_id=s.id
-                                                ).all()
-                                            ]
-                                        ),
-                                    }
-                                    for s in s_objs
+                                            .first()
+                                            .venue_charges,
+                                        )
+                                        for sv in s.show_venues
+                                    ],
+                                    "show_tags": [
+                                        (st.tag_id, st.tag_info.tag_name)
+                                        for st in s.show_tags
+                                    ],
+                                    "show_rating": average(
+                                        [
+                                            e.rating
+                                            for e in ShowReviews.query.filter_by(
+                                                show_id=s.id
+                                            ).all()
+                                        ]
+                                    ),
                                 }
-                            )
-                        }
-                    ),
-                    200,
-                )
-            else:
-                return json.dumps({"shows": []}), 200
+                                for s in s_objs[0]
+                            }
+                        )
+                    }
+                ),
+                200,
+            )
+        else:
+            return json.dumps({"shows": []}), 200
