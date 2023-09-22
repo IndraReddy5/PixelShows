@@ -29,7 +29,7 @@ class Users(db.Model, UserMixin):
     active = db.Column(db.String)
     last_login_ip = db.Column(db.String(100))
     current_login_ip = db.Column(db.String(100))
-    login_count = db.Column(db.Integer)
+    login_count = db.Column(db.Integer) 
     roles = db.relationship(
         "Roles",
         secondary="roles_users",

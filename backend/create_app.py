@@ -43,6 +43,7 @@ def create_app():
     api.add_resource(Public_Show_API, "/api/getshows")
     api.add_resource(Public_Single_Show_API, "/api/getshow/<int:s_id>")
     api.add_resource(Public_Show_Search_API, "/api/searchshows")
+    api.add_resource(Public_Venue_locations_API, "/api/getvenuelocations")
     app.security = Security(app, user_datastore)
     api.init_app(app)
     CORS(app)

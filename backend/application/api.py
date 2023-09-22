@@ -10,6 +10,7 @@ from flask_security import (
     SQLAlchemyUserDatastore,
     hash_password,
     roles_required,
+    current_user,
 )
 from application.utils import *
 
@@ -35,7 +36,7 @@ fetch("http://127.0.0.1:8000/api/login?include_auth_token",
 class Admin_Change_Password_API(Resource):
     @roles_required("admin")
     @auth_required("token")
-    def post(self):
+    def put(self):
         form_data = request.get_json()
         u_obj = Users.query.filter_by(username=form_data.get("username")).first()
         if u_obj:
@@ -355,11 +356,15 @@ class User_Profile_API(Resource):
         u_obj = Users.query.filter_by(username=username).first()
         if u_obj:
             form_data = request.get_json()
-            u_obj.username = username
-            u_obj.email = form_data.get("email")
-            u_obj.password = hash_password(form_data.get("password"))
-
-            return "User Profile Updated", 200
+            if current_user.username == username:
+                u_obj.password = hash_password(form_data.get("password"))
+                return "User Profile Updated", 200
+            else:
+                raise ValidationError(
+                    status_code=403,
+                    error_code="unauthorized",
+                    error_message="You can't change other user passwords",
+                )
         else:
             raise NotFound(status_code=404, error_message="User not found")
 
@@ -605,13 +610,18 @@ class Public_Venue_Type_API(Resource):
 
 class Public_Show_Tags_API(Resource):
     @auth_required("token")
-    def get(self, s_id):
+    def get(self):
         # list out all tags for a show
-        st_obj = ShowTags.query.filter_by(show_id=s_id).all()
-        if st_obj:
-            return json.dumps({"show_tags": [st.tag_name for st in st_obj]}), 200
+        s_id = request.args.get("show_id")
+        if s_id:
+            st_obj = ShowTags.query.filter_by(show_id=s_id).all()
+            if st_obj:
+                return json.dumps({"show_tags": [st.tag_name for st in st_obj]}), 200
         else:
-            return json.dumps({"show_tags": []}), 200
+            tags = Tags.query.all()
+            if tags:
+                return json.dumps({"tags": [(t.id, t.tag_name) for t in tags]}), 200
+        return json.dumps({"tags": []}), 200
 
 
 class Public_Show_API(Resource):
@@ -722,6 +732,7 @@ class Public_Show_Search_API(Resource):
     def get(self):
         location = request.args.get("location")
         tag = request.args.get("tag")
+        show_query = request.args.get("show_query")
         if location:
             v_objs = Venues.query.filter_by(venue_city=location).all()
             v_ids = [v.id for v in v_objs]
@@ -789,3 +800,15 @@ class Public_Show_Search_API(Resource):
             )
         else:
             return json.dumps({"shows": []}), 200
+
+
+class Public_Venue_locations_API(Resource):
+    @auth_required("token")
+    def get(self):
+        locations = Venues.query.all()
+        if locations:
+            return (
+                json.dumps({"locations": list(set([l.venue_city for l in locations]))}),
+                200,
+            )
+        return json.dumps({"locations": []}), 200
